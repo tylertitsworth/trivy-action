@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-while getopts "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:x:z:" o; do
+while getopts "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:x:y:z:" o; do
    case "${o}" in
        a)
          export scanType=${OPTARG}
@@ -71,6 +71,9 @@ while getopts "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:x:z:" o; do
        x)
          export tfVars=${OPTARG}
        ;;
+       y)
+         export dockerHost=${OPTARG}
+       ;;
        z)
          export limitSeveritiesForSARIF=${OPTARG}
        ;;
@@ -80,7 +83,7 @@ done
 
 scanType=$(echo $scanType | tr -d '\r')
 export artifactRef="${imageRef}"
-if [ "${scanType}" = "repo" ] || [ "${scanType}" = "fs" ] || [ "${scanType}" = "filesystem" ] ||  [ "${scanType}" = "config" ] ||  [ "${scanType}" = "rootfs" ];then
+if [ "${scanType}" = "repo" ] || [ "${scanType}" = "fs" ] || [ "${scanType}" = "filesystem" ] ||  [ "${scanType}" = "config" ] ||  [ "${scanType}" = "rootfs" ] || [ "${scanType}" = "sbom" ];then
   artifactRef=$(echo $scanRef | tr -d '\r')
 fi
 input=$(echo $input | tr -d '\r')
@@ -137,7 +140,7 @@ if [ $skipDirs ];then
 fi
 if [ $tfVars ] && [ "$scanType" == "config" ];then
   ARGS="$ARGS --tf-vars $tfVars"
-fi 
+fi
 
 if [ $trivyIgnores ];then
   for f in $(echo $trivyIgnores | tr "," "\n")
@@ -162,7 +165,11 @@ if [ $ignorePolicy ];then
   SARIF_ARGS="$SARIF_ARGS --ignore-policy $ignorePolicy"
 fi
 if [ "$hideProgress" == "true" ];then
-  ARGS="$ARGS --no-progress"
+  ARGS="$ARGS --quiet"
+  SARIF_ARGS="$SARIF_ARGS --quiet"
+fi
+if [ $dockerHost ];then
+  ARGS="$ARGS --docker-host $dockerHost"
 fi
 
 listAllPkgs=$(echo $listAllPkgs | tr -d '\r')
@@ -173,6 +180,7 @@ if [ "$skipFiles" ];then
   for i in $(echo $skipFiles | tr "," "\n")
   do
     ARGS="$ARGS --skip-files $i"
+    SARIF_ARGS="$SARIF_ARGS --skip-files $i"
   done
 fi
 
